@@ -1,0 +1,15 @@
+{
+	"name" : "Smart Cover Peeking",
+	"description" : "Makes you peek over cover when you ADS in front of obstacles while crouched",
+	"author" : "Hoppip",
+	"color" : "0.043 0.808 0.6",
+	"image" : "mod.png",
+	"version" : "1.0",
+	"updates" : [{
+		"identifier" : "pd2-smart-cover-peeking",
+		"host": { "meta": "https://updates.hoppip.at/pd2-smart-cover-peeking" }
+	}],
+	"hooks" : [
+		{ "hook_id" : "lib/units/beings/player/states/playerstandard", "script_path" : "mod.lua" }
+	]
+}
