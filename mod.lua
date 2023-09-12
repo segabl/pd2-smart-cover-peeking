@@ -12,8 +12,14 @@ Hooks:PostHook(PlayerStandard, "init", "init_scp", function (self)
 end)
 
 Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
-	if not self._state_data.ducking or not self._state_data.in_steelsight or not self._peek_head_stance then
+	if not self._state_data.ducking or not self._peek_head_stance then
 		self._peek_active = false
+		return
+	elseif not self._state_data.in_steelsight then
+		if self._peek_active then
+			self._ext_network:send("action_change_pose", 2, self._unit:position())
+			self._peek_active = false
+		end
 		return
 	end
 
@@ -33,7 +39,8 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 	local fwd_ray = World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5)
 	if not fwd_ray then
 		if self._peek_active then
-			self._camera_unit:base():clbk_stance_entered(nil, tweak_data.player.stances.default.crouched.head, nil, nil, nil, nil, 1, 0.2)
+			self:_stance_entered()
+			self._ext_network:send("action_change_pose", 2, self._unit:position())
 			self._peek_active = false
 		end
 		return
@@ -63,9 +70,16 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 		end
 	end
 
-	if not self._peek_active or self._peek_head_stance.translation ~= head_stance_translation then
+	if self._peek_active and self._peek_head_stance.translation == head_stance_translation then
+		return
+	end
+
+	mvector3.set(self._peek_head_stance.translation, head_stance_translation)
+
+	self._camera_unit:base():clbk_stance_entered(nil, self._peek_head_stance, nil, nil, nil, nil, 1, 0.2)
+
+	if not self._peek_active then
+		self._ext_network:send("action_change_pose", 1, self._unit:position())
 		self._peek_active = true
-		mvector3.set(self._peek_head_stance.translation, head_stance_translation)
-		self._camera_unit:base():clbk_stance_entered(nil, self._peek_head_stance, nil, nil, nil, nil, 1, 0.2)
 	end
 end)
