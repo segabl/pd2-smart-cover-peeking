@@ -5,7 +5,7 @@ local head_stance_translation = Vector3()
 Hooks:PostHook(PlayerStandard, "init", "init_scp", function (self)
 	self._peek_active = false
 	self._peek_slotmask = managers.slot:get_mask("statics")
-	self._peek_head_stance = self._peek_head_stance or {
+	self._peek_head_stance = {
 		translation = Vector3(),
 		rotation = Rotation()
 	}
@@ -20,13 +20,14 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 	local stance_standard = tweak_data.player.stances.default[managers.player:current_state()] or tweak_data.player.stances.default.standard
 	local crouched_head_stance = tweak_data.player.stances.default.crouched.head
 	local m_pos = self._unit:movement():m_pos()
+	local peek_distance = self._peek_active and 125 or 75
 
 	mvector3.set(fdw_ray_from, crouched_head_stance.translation)
 	mvector3.add(fdw_ray_from, m_pos)
 
 	mvector3.set(fwd_ray_to, self._cam_fwd)
 	mvector3.set_z(fwd_ray_to, 0)
-	mvector3.set_length(fwd_ray_to, 75)
+	mvector3.set_length(fwd_ray_to, peek_distance)
 	mvector3.add(fwd_ray_to, fdw_ray_from)
 
 	local fwd_ray = World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5)
@@ -38,8 +39,9 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 		return
 	end
 
+	local peek_free_distance = peek_distance + 50
 	local max_step = mvector3.distance(crouched_head_stance.translation, stance_standard.head.translation)
-	local step = 15
+	local step = 10
 
 	while true do
 		mvector3.step(head_stance_translation, crouched_head_stance.translation, stance_standard.head.translation, step)
@@ -48,7 +50,7 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 
 		mvector3.set(fwd_ray_to, self._cam_fwd)
 		mvector3.set_z(fwd_ray_to, 0)
-		mvector3.set_length(fwd_ray_to, 125)
+		mvector3.set_length(fwd_ray_to, peek_free_distance)
 		mvector3.add(fwd_ray_to, fdw_ray_from)
 
 		fwd_ray = World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5)
