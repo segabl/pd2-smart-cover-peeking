@@ -1,97 +1,87 @@
-local fdw_ray_from = Vector3()
-local fwd_ray_to = Vector3()
-local up_ray_from = Vector3()
-local head_stance_translation = Vector3()
+if not SmartCoverPeeking then
 
-Hooks:PostHook(PlayerStandard, "init", "init_scp", function (self)
-	self._peek_active = false
-	self._peek_slotmask = managers.slot:get_mask("statics")
-	self._peek_head_stance = {
-		translation = Vector3(),
-		rotation = Rotation()
+	SmartCoverPeeking = {}
+	SmartCoverPeeking.required = {}
+	SmartCoverPeeking.mod_path = ModPath
+	SmartCoverPeeking.save_path = SavePath .. "SmartCoverPeeking.json"
+	SmartCoverPeeking.settings = {
+		trigger_distance = 75,
+		sticky_distance = 50
 	}
-end)
 
-function PlayerStandard:_chk_stop_peek()
-	if not self._peek_active then
-		return
-	end
-
-	self._peek_active = false
-
-	self:_stance_entered()
-
-	if self._state_data.ducking then
-		self._ext_network:send("action_change_pose", 2, self._unit:position())
-	end
-end
-
-Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
-	if not self._peek_head_stance or not self._state_data.ducking or not self._state_data.in_steelsight then
-		return self:_chk_stop_peek()
-	end
-
-	local stance_standard = tweak_data.player.stances.default[managers.player:current_state()] or tweak_data.player.stances.default.standard
-	local crouched_head_stance = tweak_data.player.stances.default.crouched.head
-	local m_pos = self._unit:movement():m_pos()
-	local peek_distance = self._peek_active and 125 or 75
-
-	mvector3.set(fdw_ray_from, crouched_head_stance.translation)
-	mvector3.add(fdw_ray_from, m_pos)
-
-	mvector3.set(fwd_ray_to, self._cam_fwd)
-	mvector3.set_z(fwd_ray_to, 0)
-	mvector3.set_length(fwd_ray_to, peek_distance)
-	mvector3.add(fwd_ray_to, fdw_ray_from)
-
-	local fwd_ray = World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5)
-	if not fwd_ray then
-		return self:_chk_stop_peek()
-	end
-
-	local peek_free_distance = peek_distance + 50
-	local step, step_size = 0, 0.1
-
-	mvector3.set(up_ray_from, m_pos)
-	mvector3.set_z(up_ray_from, m_pos.z + 25)
-
-	while true do
-		mvector3.lerp(head_stance_translation, crouched_head_stance.translation, stance_standard.head.translation, step)
-		mvector3.set(fdw_ray_from, head_stance_translation)
-		mvector3.add(fdw_ray_from, m_pos)
-
-		if World:raycast("ray", up_ray_from, fdw_ray_from, "slot_mask", self._slotmask_gnd_ray, "sphere_cast_radius", 20, "report") then
-			if self._peek_active then
-				break
-			else
-				return
+	local data = io.file_is_readable(SmartCoverPeeking.save_path) and io.load_as_json(SmartCoverPeeking.save_path)
+	if data then
+		for k, v in pairs(data) do
+			if type(SmartCoverPeeking.settings[k]) == type(v) then
+				SmartCoverPeeking.settings[k] = v
 			end
 		end
+	end
 
-		mvector3.set(fwd_ray_to, self._cam_fwd)
-		mvector3.set_z(fwd_ray_to, 0)
-		mvector3.set_length(fwd_ray_to, peek_free_distance)
-		mvector3.add(fwd_ray_to, fdw_ray_from)
-
-		if not World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5, "report") then
-			break
-		elseif step < 1 then
-			step = step + step_size
+	Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInitKillFeed", function(loc)
+		if HopLib then
+			HopLib:load_localization(SmartCoverPeeking.mod_path .. "loc/", loc)
 		else
-			return
+			loc:load_localization_file(SmartCoverPeeking.mod_path .. "loc/english.txt")
 		end
+	end)
+
+	Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusSmartCoverPeeking", function(menu_manager, nodes)
+		local menu_id_main = "SmartCoverPeekingMenu"
+
+		MenuHelper:NewMenu(menu_id_main)
+
+		function MenuCallbackHandler:SmartCoverPeeking_value(item)
+			SmartCoverPeeking.settings[item:name()] = item:value()
+		end
+
+		function MenuCallbackHandler:SmartCoverPeeking_save()
+			io.save_as_json(SmartCoverPeeking.settings, SmartCoverPeeking.save_path)
+		end
+
+		MenuHelper:AddSlider({
+			id = "trigger_distance",
+			title = "menu_scp_trigger_distance",
+			desc = "menu_scp_trigger_distance_desc",
+			callback = "SmartCoverPeeking_value",
+			value = SmartCoverPeeking.settings.trigger_distance,
+			min = 50,
+			max = 150,
+			step = 10,
+			show_value = true,
+			display_precision = 0,
+			menu_id = menu_id_main,
+			priority = 1
+		})
+
+		MenuHelper:AddSlider({
+			id = "sticky_distance",
+			title = "menu_scp_sticky_distance",
+			desc = "menu_scp_sticky_distance_desc",
+			callback = "SmartCoverPeeking_value",
+			value = SmartCoverPeeking.settings.sticky_distance,
+			min = 0,
+			max = 100,
+			step = 10,
+			show_value = true,
+			display_precision = 0,
+			menu_id = menu_id_main,
+			priority = 0
+		})
+
+		nodes[menu_id_main] = MenuHelper:BuildMenu(menu_id_main, { back_callback = "SmartCoverPeeking_save" })
+		MenuHelper:AddMenuItem(nodes["blt_options"], menu_id_main, "menu_scp")
+	end)
+
+end
+
+if RequiredScript and not SmartCoverPeeking.required[RequiredScript] then
+
+	local fname = SmartCoverPeeking.mod_path .. RequiredScript:gsub(".+/(.+)", "lua/%1.lua")
+	if io.file_is_readable(fname) then
+		dofile(fname)
 	end
 
-	if self._peek_active and self._peek_head_stance.translation == head_stance_translation then
-		return
-	end
+	SmartCoverPeeking.required[RequiredScript] = true
 
-	mvector3.set(self._peek_head_stance.translation, head_stance_translation)
-
-	self._camera_unit:base():clbk_stance_entered(nil, self._peek_head_stance, nil, nil, nil, nil, 1, 0.2)
-
-	if not self._peek_active then
-		self._ext_network:send("action_change_pose", 1, self._unit:position())
-		self._peek_active = true
-	end
-end)
+end
