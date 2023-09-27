@@ -88,7 +88,7 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 
 	mvector3.set(self._peek_head_stance.translation, head_stance_translation)
 
-	self._camera_unit:base():clbk_stance_entered(nil, self._peek_head_stance, nil, nil, nil, nil, 1, 0.2)
+	self._camera_unit:base():clbk_stance_entered(nil, self._peek_head_stance, nil, nil, nil, nil, 1, 1, 1, 0.2)
 
 	if not self._peek_active then
 		self._ext_network:send("action_change_pose", 1, self._unit:position())
