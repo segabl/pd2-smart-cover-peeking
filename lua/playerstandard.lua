@@ -27,6 +27,9 @@ function PlayerStandard:_chk_stop_peek()
 end
 
 Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
+	local started_steelsight = not self._was_steelsight and self._state_data.in_steelsight
+	self._was_steelsight = self._state_data.in_steelsight
+
 	if not self._peek_head_stance or not self._state_data.ducking or not self._state_data.in_steelsight then
 		return self:_chk_stop_peek()
 	end
@@ -35,21 +38,6 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 	local crouched_head_stance = tweak_data.player.stances.default.crouched.head
 	local m_pos = self._unit:movement():m_pos()
 	local peek_distance = SmartCoverPeeking.settings.trigger_distance + (self._peek_active and SmartCoverPeeking.settings.sticky_distance or 0)
-
-	mvector3.set(fdw_ray_from, crouched_head_stance.translation)
-	mvector3.add(fdw_ray_from, m_pos)
-
-	mvector3.set(fwd_ray_to, self._cam_fwd)
-	mvector3.set_z(fwd_ray_to, 0)
-	mvector3.set_length(fwd_ray_to, peek_distance)
-	mvector3.add(fwd_ray_to, fdw_ray_from)
-
-	local fwd_ray = World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5)
-	if not fwd_ray then
-		return self:_chk_stop_peek()
-	end
-
-	local peek_free_distance = peek_distance + 25
 	local step, step_size = 0, 0.1
 
 	mvector3.set(up_ray_from, m_pos)
@@ -62,7 +50,11 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 
 		if World:raycast("ray", up_ray_from, fdw_ray_from, "slot_mask", self._slotmask_gnd_ray, "sphere_cast_radius", 20, "report") then
 			if self._peek_active then
-				break
+				if not SmartCoverPeeking.settings.continuous_trigger and head_stance_translation.z < self._peek_head_stance.translation.z then
+					return self:_chk_stop_peek()
+				else
+					break
+				end
 			else
 				return
 			end
@@ -70,7 +62,7 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 
 		mvector3.set(fwd_ray_to, self._cam_fwd)
 		mvector3.set_z(fwd_ray_to, 0)
-		mvector3.set_length(fwd_ray_to, peek_free_distance)
+		mvector3.set_length(fwd_ray_to, peek_distance)
 		mvector3.add(fwd_ray_to, fdw_ray_from)
 
 		if not World:raycast("ray", fdw_ray_from, fwd_ray_to, "slot_mask", self._peek_slotmask, "sphere_cast_radius", 5, "report") then
@@ -82,7 +74,11 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 		end
 	end
 
-	if self._peek_active and self._peek_head_stance.translation == head_stance_translation then
+	if self._peek_active then
+		if not SmartCoverPeeking.settings.continuous_trigger or self._peek_head_stance.translation == head_stance_translation then
+			return
+		end
+	elseif step == 0 or not SmartCoverPeeking.settings.continuous_trigger and not started_steelsight then
 		return
 	end
 

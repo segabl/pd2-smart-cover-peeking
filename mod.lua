@@ -6,7 +6,8 @@ if not SmartCoverPeeking then
 	SmartCoverPeeking.save_path = SavePath .. "SmartCoverPeeking.json"
 	SmartCoverPeeking.settings = {
 		trigger_distance = 75,
-		sticky_distance = 50
+		sticky_distance = 50,
+		continuous_trigger = false
 	}
 
 	local data = io.file_is_readable(SmartCoverPeeking.save_path) and io.load_as_json(SmartCoverPeeking.save_path)
@@ -28,11 +29,17 @@ if not SmartCoverPeeking then
 
 	Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusSmartCoverPeeking", function(menu_manager, nodes)
 		local menu_id_main = "SmartCoverPeekingMenu"
+		local sticky_distance
 
 		MenuHelper:NewMenu(menu_id_main)
 
 		function MenuCallbackHandler:SmartCoverPeeking_value(item)
 			SmartCoverPeeking.settings[item:name()] = item:value()
+		end
+
+		function MenuCallbackHandler:SmartCoverPeeking_continuous_trigger(item)
+			SmartCoverPeeking.settings[item:name()] = item:value() == "on"
+			sticky_distance:set_enabled(SmartCoverPeeking.settings.continuous_trigger)
 		end
 
 		function MenuCallbackHandler:SmartCoverPeeking_save()
@@ -51,15 +58,32 @@ if not SmartCoverPeeking then
 			show_value = true,
 			display_precision = 0,
 			menu_id = menu_id_main,
+			priority = 3
+		})
+
+		MenuHelper:AddDivider({
+			size = 8,
+			menu_id = menu_id_main,
+			priority = 2
+		})
+
+		MenuHelper:AddToggle({
+			id = "continuous_trigger",
+			title = "menu_scp_continuous_trigger",
+			desc = "menu_scp_continuous_trigger_desc",
+			callback = "SmartCoverPeeking_continuous_trigger",
+			value = SmartCoverPeeking.settings.continuous_trigger,
+			menu_id = menu_id_main,
 			priority = 1
 		})
 
-		MenuHelper:AddSlider({
+		sticky_distance = MenuHelper:AddSlider({
 			id = "sticky_distance",
 			title = "menu_scp_sticky_distance",
 			desc = "menu_scp_sticky_distance_desc",
 			callback = "SmartCoverPeeking_value",
 			value = SmartCoverPeeking.settings.sticky_distance,
+			disabled = not SmartCoverPeeking.settings.continuous_trigger,
 			min = 0,
 			max = 100,
 			step = 10,

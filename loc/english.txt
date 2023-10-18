@@ -3,5 +3,7 @@
 	"menu_scp_trigger_distance": "Trigger distance",
 	"menu_scp_trigger_distance_desc": "Distance to cover (in cm) that triggers peeking when aiming down sights",
 	"menu_scp_sticky_distance": "Sticky distance",
-	"menu_scp_sticky_distance_desc": "Additional distance (in cm) to maintain peeking when moving away from cover"
+	"menu_scp_sticky_distance_desc": "Additional distance (in cm) to maintain peeking when moving away from cover",
+	"menu_scp_continuous_trigger": "Dynamic peeking",
+	"menu_scp_continuous_trigger_desc": "Update peeking position continuously while aiming down sights"
 }
