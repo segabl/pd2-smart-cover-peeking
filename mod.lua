@@ -19,7 +19,7 @@ if not SmartCoverPeeking then
 		end
 	end
 
-	Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInitKillFeed", function(loc)
+	Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInitSmartCoverPeeking", function(loc)
 		if HopLib then
 			HopLib:load_localization(SmartCoverPeeking.mod_path .. "loc/", loc)
 		else
