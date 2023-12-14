@@ -12,6 +12,11 @@ Hooks:PostHook(PlayerStandard, "init", "init_scp", function (self)
 	}
 end)
 
+Hooks:PostHook(PlayerStandard, "inventory_clbk_listener", "inventory_clbk_listener_scp", function (self)
+	local weapon = self._ext_inventory:equipped_unit()
+	self._weapon_is_saw = alive(weapon) and weapon:base():is_category("saw")
+end)
+
 function PlayerStandard:_chk_stop_peek()
 	if not self._peek_active then
 		return
@@ -30,7 +35,7 @@ Hooks:PostHook(PlayerStandard, "update", "update_scp", function (self)
 	local started_steelsight = not self._was_steelsight and self._state_data.in_steelsight
 	self._was_steelsight = self._state_data.in_steelsight
 
-	if not self._peek_head_stance or not self._state_data.ducking or not self._state_data.in_steelsight then
+	if self._weapon_is_saw or not self._peek_head_stance or not self._state_data.ducking or not self._state_data.in_steelsight then
 		return self:_chk_stop_peek()
 	end
 
